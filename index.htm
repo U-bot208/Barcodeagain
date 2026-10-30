@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>AWB Barcode PDF Generator</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+    min-height: 100vh;
+    padding: 15px;
+}
+
+.container {
+    width: 100%;
+    max-width: 900px;
+    margin: auto;
+}
+
+.header {
+    background: #111827;
+    color: white;
+    padding: 25px 20px;
+    text-align: center;
+    border-radius: 18px 18px 0 0;
+}
+
+.header h1 {
+    font-size: 25px;
+    margin-bottom: 8px;
+}
+
+.header p {
+    font-size: 14px;
+    color: #d1d5db;
+}
+
+.main {
+    background: white;
+    padding: 20px;
+    border-radius: 0 0 18px 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+}
+
+textarea {
+    width: 100%;
+    min-height: 330px;
+    resize: vertical;
+
+    border: 2px solid #d1d5db;
+    border-radius: 12px;
+
+    padding: 15px;
+
+    font-size: 16px;
+    font-family: monospace;
+
+    outline: none;
+}
+
+textarea:focus {
+    border-color: #2563eb;
+}
+
+.info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    margin: 14px 0;
+
+    gap: 10px;
+    flex-wrap: wrap;
+
+    font-size: 14px;
+}
+
+.count {
+    font-weight: bold;
+}
+
+.buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+button {
+    border: none;
+    border-radius: 11px;
+
+    padding: 15px;
+
+    font-size: 16px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+.generate {
+    background: #2563eb;
+    color: white;
+}
+
+.generate:hover {
+    background: #1d4ed8;
+}
+
+.clear {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.clear:hover {
+    background: #d1d5db;
+}
+
+.status {
+    margin-top: 15px;
+
+    padding: 13px;
+
+    border-radius: 10px;
+
+    text-align: center;
+
+    font-weight: bold;
+
+    display: none;
+}
+
+.status.show {
+    display: block;
+}
+
+.status.success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.progress {
+    margin-top: 15px;
+
+    width: 100%;
+    height: 10px;
+
+    background: #e5e7eb;
+
+    border-radius: 20px;
+
+    overflow: hidden;
+
+    display: none;
+}
+
+.progress.show {
+    display: block;
+}
+
+.progress-bar {
+    width: 0%;
+    height: 100%;
+
+    background: #2563eb;
+
+    transition: width 0.1s linear;
+}
+
+.tip {
+    margin-top: 18px;
+
+    background: #eff6ff;
+
+    padding: 15px;
+
+    border-radius: 10px;
+
+    color: #1e3a8a;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+}
+
+.preview {
+    margin-top: 20px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 12px;
+
+    padding: 20px;
+
+    text-align: center;
+}
+
+.preview h3 {
+    margin-bottom: 15px;
+}
+
+#previewCanvas {
+    max-width: 100%;
+    height: auto;
+}
+
+.preview-number {
+    margin-top: 10px;
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+    word-break: break-all;
+}
+
+@media(max-width:600px) {
+
+    body {
+        padding: 8px;
+    }
+
+    .header {
+        padding: 20px 15px;
+    }
+
+    .header h1 {
+        font-size: 21px;
+    }
+
+    .main {
+        padding: 15px;
+    }
+
+    textarea {
+        min-height: 260px;
+        font-size: 15px;
+    }
+
+    .buttons {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+
+        <h1>AWB Barcode PDF Generator</h1>
+
+        <p>
+            Bulk AWB → Barcode → One AWB Per PDF Page
+        </p>
+
+    </div>
+
+
+    <div class="main">
+
+        <textarea
+            id="awbInput"
+            placeholder="Enter ONE AWB per line
+
+Example:
+
+fmpp27900532
+Mysp5900754326
+3699098765579
+123456789012
+987654321098"></textarea>
+
+
+        <div class="info">
+
+            <div class="count">
+                AWBs:
+                <span id="awbCount">0</span>
+            </div>
+
+            <div>
+                CODE 128 • Vector PDF
+            </div>
+
+        </div>
+
+
+        <div class="buttons">
+
+            <button
+                class="generate"
+                id="generateBtn"
+                onclick="generatePDF()">
+
+                📄 Generate PDF
+
+            </button>
+
+
+            <button
+                class="clear"
+                onclick="clearAll()">
+
+                🗑️ Clear
+
+            </button>
+
+        </div>
+
+
+        <div
+            id="status"
+            class="status">
+        </div>
+
+
+        <div
+            id="progress"
+            class="progress">
+
+            <div
+                id="progressBar"
+                class="progress-bar">
+            </div>
+
+        </div>
+
+
+        <div class="tip">
+
+            <b>How to use:</b><br>
+
+            Enter one AWB number on each line.
+            Letters and numbers are supported.
+
+            <br><br>
+
+            Example:
+            <br>
+
+            <b>fmpp27900532</b><br>
+            <b>Mysp5900754326</b><br>
+            <b>3699098765579</b>
+
+            <br><br>
+
+            Every AWB gets its own PDF page.
+
+            Duplicate AWBs are automatically removed.
+
+        </div>
+
+
+        <div class="preview">
+
+            <h3>Barcode Preview</h3>
+
+            <canvas
+                id="previewCanvas"
+                width="900"
+                height="260">
+            </canvas>
+
+            <div
+                id="previewNumber"
+                class="preview-number">
+                Example AWB
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/*
+=========================================================
+CODE 128 BARCODE ENGINE
+=========================================================
+
+This implementation uses Code 128 Set B.
+
+It supports:
+- Numbers
+- Uppercase letters
+- Lowercase letters
+- Common ASCII characters
+
+Example:
+fmpp27900532
+Mysp5900754326
+3699098765579
+=========================================================
+*/
+
+
+const CODE128_PATTERNS = [
+
+"212222",
+"222122",
+"222221",
+"121223",
+"121322",
+"131222",
+"122213",
+"122312",
+"132212",
+"221213",
+"221312",
+"231212",
+"112232",
+"122132",
+"122231",
+"113222",
+"123122",
+"123221",
+"223211",
+"221132",
+"221231",
+"213212",
+"223112",
+"312131",
+"311222",
+"321122",
+"321221",
+"312212",
+"322112",
+"322211",
+"212123",
+"212321",
+"232121",
+"111323",
+"131123",
+"131321",
+"112313",
+"132113",
+"132311",
+"211313",
+"231113",
+"231311",
+"112133",
+"112331",
+"132131",
+"113123",
+"113321",
+"133121",
+"313121",
+"211331",
+"231131",
+"213113",
+"213311",
+"213131",
+"311123",
+"311321",
+"331121",
+"312113",
+"312311",
+"332111",
+"314111",
+"221411",
+"431111",
+"111224",
+"111422",
+"121124",
+"121421",
+"141122",
+"141221",
+"112214",
+"112412",
+"122114",
+"122411",
+"142112",
+"142211",
+"241211",
+"221114",
+"413111",
+"241112",
+"134111",
+"111242",
+"121142",
+"121241",
+"114212",
+"124112",
+"124211",
+"411212",
+"421112",
+"421211",
+"212141",
+"214121",
+"412121",
+"111143",
+"111341",
+"131141",
+"114113",
+"114311",
+"411113",
+"411311",
+"113141",
+"114131",
+"311141",
+"411131",
+"211412",
+"211214",
+"211232",
+"2331112"
+];
+
+
+/*
+=========================================================
+CONVERT CHARACTER TO CODE 128 B VALUE
+=========================================================
+*/
+
+function charToCode128B(char) {
+
+    const code = char.charCodeAt(0);
+
+    /*
+        Code 128 B starts at ASCII 32.
+
+        Space = 0
+        ! = 1
+        "
+        ...
+        DEL = 95
+    */
+
+    if (code < 32 || code > 127) {
+
+        throw new Error(
+            "Unsupported character: " + char
+        );
+
+    }
+
+    return code - 32;
+
+}
+
+
+/*
+=========================================================
+CREATE CODE 128 BARCODE DATA
+=========================================================
+*/
+
+function createCode128Data(text) {
+
+    if (!text || text.length === 0) {
+
+        throw new Error(
+            "AWB cannot be empty."
+        );
+
+    }
+
+
+    /*
+        Start Code B = 104
+    */
+
+    const values = [104];
+
+
+    /*
+        Add each character
+    */
+
+    for (let i = 0; i < text.length; i++) {
+
+        values.push(
+            charToCode128B(text[i])
+        );
+
+    }
+
+
+    /*
+        Calculate checksum
+
+        checksum =
+        start value +
+        character value × position
+    */
+
+    let checksum = values[0];
+
+
+    for (let i = 1; i < values.length; i++) {
+
+        checksum +=
+            values[i] * i;
+
+    }
+
+
+    checksum =
+        checksum % 103;
+
+
+    values.push(checksum);
+
+
+    /*
+        Stop Code = 106
+    */
+
+    values.push(106);
+
+
+    return values;
+
+}
+
+
+/*
+=========================================================
+CONVERT CODE 128 PATTERNS INTO BARS
+=========================================================
+*/
+
+function getBarcodeBars(text) {
+
+    const values =
+        createCode128Data(text);
+
+    const bars = [];
+
+    let x = 0;
+
+    for (const value of values) {
+
+        const pattern =
+            CODE128_PATTERNS[value];
+
+        let black = true;
+
+        for (let i = 0; i < pattern.length; i++) {
+
+            const width =
+                Number(pattern[i]);
+
+            bars.push({
+
+                x: x,
+
+                width: width,
+
+                black: black
+
+            });
+
+            x += width;
+
+            black = !black;
+
+        }
+
+    }
+
+
+    return {
+
+        bars: bars,
+
+        totalWidth: x
+
+    };
+
+}
+
+
+/*
+=========================================================
+DRAW BARCODE ON PDF
+=========================================================
+*/
+
+function drawBarcode(
+    pdf,
+    text,
+    x,
+    y,
+    width,
+    height
+) {
+
+    const barcode =
+        getBarcodeBars(text);
+
+
+    /*
+        Convert barcode modules
+        to requested width.
+    */
+
+    const scale =
+        width / barcode.totalWidth;
+
+
+    for (const bar of barcode.bars) {
+
+        if (!bar.black) {
+
+            continue;
+
+        }
+
+
+        pdf.rect(
+            x + (bar.x * scale),
+            y,
+            Math.max(
+                0.01,
+                bar.width * scale
+            ),
+            height,
+            "F"
+        );
+
+    }
+
+}
+
+
+/*
+=========================================================
+AWB INPUT
+=========================================================
+*/
+
+const textarea =
+    document.getElementById(
+        "awbInput"
+    );
+
+
+const countDisplay =
+    document.getElementById(
+        "awbCount"
+    );
+
+
+const statusBox =
+    document.getElementById(
+        "status"
+    );
+
+
+const progress =
+    document.getElementById(
+        "progress"
+    );
+
+
+const progressBar =
+    document.getElementById(
+        "progressBar"
+    );
+
+
+const generateBtn =
+    document.getElementById(
+        "generateBtn"
+    );
+
+
+/*
+=========================================================
+GET AWB LIST
+=========================================================
+*/
+
+function getAWBs() {
+
+    return textarea.value
+
+        .split(/\r?\n/)
+
+        .map(
+            value => value.trim()
+        )
+
+        .filter(
+            value => value.length > 0
+        );
+
+}
+
+
+/*
+=========================================================
+UPDATE COUNT
+=========================================================
+*/
+
+function updateCount() {
+
+    const awbs =
+        getAWBs();
+
+
+    countDisplay.textContent =
+        awbs.length;
+
+
+    updatePreview();
+
+}
+
+
+textarea.addEventListener(
+    "input",
+    updateCount
+);
+
+
+/*
+=========================================================
+PREVIEW
+=========================================================
+*/
+
+function updatePreview() {
+
+    const awbs =
+        getAWBs();
+
+
+    const canvas =
+        document.getElementById(
+            "previewCanvas"
+        );
+
+
+    const ctx =
+        canvas.getContext("2d");
+
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    let awb =
+        awbs.length > 0
+        ? awbs[0]
+        : "3699098765579";
+
+
+    try {
+
+        const barcode =
+            getBarcodeBars(awb);
+
+
+        const padding = 50;
+
+        const barcodeWidth =
+            canvas.width -
+            (padding * 2);
+
+        const scale =
+            barcodeWidth /
+            barcode.totalWidth;
+
+
+        ctx.fillStyle =
+            "#000000";
+
+
+        for (const bar of barcode.bars) {
+
+            if (!bar.black) {
+
+                continue;
+
+            }
+
+
+            ctx.fillRect(
+                padding +
+                (bar.x * scale),
+
+                30,
+
+                Math.max(
+                    1,
+                    bar.width * scale
+                ),
+
+                150
+            );
+
+        }
+
+
+        document.getElementById(
+            "previewNumber"
+        ).textContent = awb;
+
+    }
+    catch(error) {
+
+        document.getElementById(
+            "previewNumber"
+        ).textContent =
+            "Invalid character";
+
+    }
+
+}
+
+
+/*
+=========================================================
+STATUS
+=========================================================
+*/
+
+function showStatus(
+    message,
+    type = "success"
+) {
+
+    statusBox.textContent =
+        message;
+
+
+    statusBox.className =
+        "status show " + type;
+
+}
+
+
+/*
+=========================================================
+GENERATE PDF
+=========================================================
+*/
+
+async function generatePDF() {
+
+    const originalAWBs =
+        getAWBs();
+
+
+    if (
+        originalAWBs.length === 0
+    ) {
+
+        showStatus(
+            "Please enter at least one AWB.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    /*
+        Remove duplicates
+    */
+
+    const awbs =
+        [...new Set(originalAWBs)];
+
+
+    /*
+        Check for unsupported characters
+    */
+
+    try {
+
+        for (const awb of awbs) {
+
+            createCode128Data(awb);
+
+        }
+
+    }
+    catch(error) {
+
+        showStatus(
+            error.message,
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    /*
+        Disable button
+    */
+
+    generateBtn.disabled =
+        true;
+
+    generateBtn.style.opacity =
+        "0.6";
+
+
+    progress.classList.add(
+        "show"
+    );
+
+
+    progressBar.style.width =
+        "0%";
+
+
+    try {
+
+        const {
+            jsPDF
+        } = window.jspdf;
+
+
+        /*
+        ================================================
+        IMPORTANT:
+
+        compress:true
+
+        makes the PDF smaller.
+
+        We also draw barcode bars directly
+        as PDF vector rectangles.
+
+        NO PNG.
+        NO JPEG.
+        NO CANVAS IMAGE IN PDF.
+        ================================================
+        */
+
+        const pdf =
+            new jsPDF({
+
+                orientation:
+                    "portrait",
+
+                unit:
+                    "mm",
+
+                format:
+                    "a4",
+
+                compress:
+                    true
+
+            });
+
+
+        const pageWidth =
+            pdf.internal.pageSize.getWidth();
+
+
+        const pageHeight =
+            pdf.internal.pageSize.getHeight();
+
+
+        /*
+            Barcode dimensions
+        */
+
+        const barcodeWidth =
+            170;
+
+
+        const barcodeHeight =
+            55;
+
+
+        const barcodeX =
+            (pageWidth -
+            barcodeWidth) / 2;
+
+
+        const barcodeY =
+            105;
+
+
+        /*
+        ================================================
+        PROCESS EVERY AWB
+        ================================================
+        */
+
+        for (
+            let i = 0;
+            i < awbs.length;
+            i++
+        ) {
+
+            const awb =
+                awbs[i];
+
+
+            /*
+                Add new page
+                except first page
+            */
+
+            if (i > 0) {
+
+                pdf.addPage();
+
+            }
+
+
+            /*
+            ---------------------------------------------
+            BARCODE
+            ---------------------------------------------
+            */
+
+            pdf.setFillColor(
+                0,
+                0,
+                0
+            );
+
+
+            drawBarcode(
+                pdf,
+                awb,
+                barcodeX,
+                barcodeY,
+                barcodeWidth,
+                barcodeHeight
+            );
+
+
+            /*
+            ---------------------------------------------
+            AWB NUMBER
+            ---------------------------------------------
+            */
+
+            pdf.setTextColor(
+                0,
+                0,
+                0
+            );
+
+
+            pdf.setFont(
+                "helvetica",
+                "bold"
+            );
+
+
+            pdf.setFontSize(
+                24
+            );
+
+
+            pdf.text(
+                awb,
+                pageWidth / 2,
+                barcodeY +
+                barcodeHeight +
+                18,
+                {
+                    align:
+                        "center"
+                }
+            );
+
+
+            /*
+            ---------------------------------------------
+            PAGE NUMBER
+            ---------------------------------------------
+            */
+
+            pdf.setFont(
+                "helvetica",
+                "normal"
+            );
+
+
+            pdf.setFontSize(
+                8
+            );
+
+
+            pdf.text(
+                `${i + 1} / ${awbs.length}`,
+                pageWidth / 2,
+                pageHeight - 12,
+                {
+                    align:
+                        "center"
+                }
+            );
+
+
+            /*
+            ---------------------------------------------
+            PROGRESS
+            ---------------------------------------------
+            */
+
+            const percent =
+                Math.round(
+                    ((i + 1) /
+                    awbs.length) *
+                    100
+                );
+
+
+            progressBar.style.width =
+                percent + "%";
+
+
+            if (
+                i % 25 === 0 ||
+                i === awbs.length - 1
+            ) {
+
+                showStatus(
+                    `Generating PDF... ${i + 1} / ${awbs.length}`,
+                    "success"
+                );
+
+
+                /*
+                    Allow browser UI
+                    to update.
+                */
+
+                await new Promise(
+                    resolve =>
+                        setTimeout(
+                            resolve,
+                            0
+                        )
+                );
+
+            }
+
+        }
+
+
+        /*
+        ================================================
+        DOWNLOAD
+        ================================================
+        */
+
+        const now =
+            new Date();
+
+
+        const date =
+            now.getFullYear() +
+            "-" +
+            String(
+                now.getMonth() + 1
+            ).padStart(2, "0") +
+            "-" +
+            String(
+                now.getDate()
+            ).padStart(2, "0");
+
+
+        pdf.save(
+            `AWB_Barcodes_${date}.pdf`
+        );
+
+
+        showStatus(
+            `DONE! ${awbs.length} AWB pages created. ${
+                originalAWBs.length !== awbs.length
+                ? "Duplicate AWBs were removed."
+                : ""
+            }`,
+            "success"
+        );
+
+
+    }
+    catch(error) {
+
+        console.error(error);
+
+
+        showStatus(
+            "PDF generation failed: " +
+            error.message,
+            "error"
+        );
+
+    }
+
+
+    /*
+        Re-enable button
+    */
+
+    generateBtn.disabled =
+        false;
+
+
+    generateBtn.style.opacity =
+        "1";
+
+}
+
+
+/*
+=========================================================
+CLEAR
+=========================================================
+*/
+
+function clearAll() {
+
+    textarea.value =
+        "";
+
+
+    countDisplay.textContent =
+        "0";
+
+
+    statusBox.className =
+        "status";
+
+
+    progress.classList.remove(
+        "show"
+    );
+
+
+    progressBar.style.width =
+        "0%";
+
+
+    updatePreview();
+
+}
+
+
+/*
+=========================================================
+INITIAL PREVIEW
+=========================================================
+*/
+
+updatePreview();
+
+</script>
+
+</body>
+</html>
